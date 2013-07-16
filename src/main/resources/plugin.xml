@@ -1,0 +1,4 @@
+<plugin>
+  <name>blacklist</name>
+  <classname>dslprez.scala.plugins.BlackListPluginCompiler</classname>
+</plugin>
