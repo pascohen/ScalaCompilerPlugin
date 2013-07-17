@@ -24,12 +24,19 @@ class BlackListPluginCompiler(val global: Global) extends Plugin {
     class BLCompilerPhase(prev: Phase) extends StdPhase(prev) {
       override def name = BlackListPluginCompiler.this.name
       def apply(unit: CompilationUnit) {
-        println("HHHH")
-        for ( tree @ Apply(Select(rcvr, nme.DIV), List(Literal(Constant(0)))) <- unit.body;
-             if rcvr.tpe <:< definitions.IntClass.tpe) 
-          {
-            unit.error(tree.pos, "definitely division by zero")
+        
+        for (b <- unit.body) {
+          if (b.toString().contains("System.exit")) {
+        	  println(b+"=="+b.tpe+"/"+b.symbol)
+        	  unit.error(b.pos, "System.exit forbidden")
           }
+        	
+        }
+        //for ( tree @ Apply(Select(rcvr, nme.DIV), List(Literal(Constant(0)))) <- unit.body;
+         //    if rcvr.tpe <:< definitions.IntClass.tpe) 
+         // {
+          //  unit.error(tree.pos, "definitely division by zero")
+         // }
       }
     }
   }
