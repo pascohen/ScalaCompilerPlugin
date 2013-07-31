@@ -46,7 +46,7 @@ class DSLPluginCompiler(val global: Global) extends Plugin {
       override def name = DSLPluginCompiler.this.name
 
       def apply(unit: global.CompilationUnit) {
-        println("What is B/Wlist status " + blacklistFile + "/" + whitelistFile + "/" + restrictCalls)
+        //println("What is B/Wlist status " + blacklistFile + "/" + whitelistFile + "/" + restrictCalls)
         if (restrictCalls) {
           for (global.Apply(fun, _) <- unit.body) {
             fun.symbol match {
@@ -75,7 +75,7 @@ class DSLPluginCompiler(val global: Global) extends Plugin {
 
     class TemplateTransformer extends global.Transformer {
 
-      println("What is timer status " + isTimerActivated + "/" + timerValue)
+      //println("What is timer status " + isTimerActivated + "/" + timerValue)
 
       def preTransform(tree: global.Tree): global.Tree = tree
 
