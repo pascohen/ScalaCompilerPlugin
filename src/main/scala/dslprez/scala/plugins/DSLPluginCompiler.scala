@@ -6,6 +6,8 @@ import nsc.Phase
 import nsc.plugins.Plugin
 import nsc.plugins.PluginComponent
 import scala.tools.nsc.transform.Transform
+import scala.tools.nsc.transform.TypingTransformers
+import scala.tools.nsc.ast.TreeDSL
 
 class DSLPluginCompiler(val global: Global) extends Plugin {
 
@@ -64,34 +66,51 @@ class DSLPluginCompiler(val global: Global) extends Plugin {
     }
   }
 
-  private object DSLTimerComponent extends PluginComponent with Transform {
+  private object DSLTimerComponent extends PluginComponent 
+  with Transform 
+  with TypingTransformers 
+  with TreeDSL {
     val global: DSLPluginCompiler.this.global.type = DSLPluginCompiler.this.global
 
-    val runsAfter = List[String]("refchecks", "dslrestrict");
+    val runsAfter = List[String]("typer", "refchecks", "dslrestrict");
 
     val phaseName = "dsltimer"
 
-    def newTransformer(unit: global.CompilationUnit) = new TemplateTransformer
+    def newTransformer(unit: global.CompilationUnit) = new TemplateTransformer(unit)
 
-    class TemplateTransformer extends global.Transformer {
+    class TemplateTransformer(unit: global.CompilationUnit) extends TypingTransformer(unit) {
 
       //println("What is timer status " + isTimerActivated + "/" + timerValue)
 
+      var gtStartTime:global.Tree = _
+      
       def preTransform(tree: global.Tree): global.Tree = tree
 
-      def postTransform(tree: global.Tree): global.Tree = tree 
-      /*match {
-        case global.Apply(fun,_) =>
-          println("post-transforming fun " + fun)
-          if (fun.toString.contains("exit"))
-        	  global.TreeReplacer(tree,(reify {System.out.println("test")}).tree)
-          else tree
+      def postTransform(tree: global.Tree): global.Tree = {
+          //println("post-transforming fun " + tree)
+        
+        tree match {
+            case f:global.Function =>    
+            gtStartTime = tree
+            println("GetStartTime "+f+" "+gtStartTime)
+            tree
+        case global.Apply(fun, _) =>    
+          if (fun.toString.contains("exit")) {
+            println("post-transforming fun " + fun)
+            //global.typer.typed(global.Block(global.reify {System.out.println("toto")}.tree,tree))
+            //global.typer.typed(global.reify {System.out.println("Execution duration "+((System.currentTimeMillis()-java.lang.management.ManagementFactory.getRuntimeMXBean().getStartTime())/1000))}.tree)
+            global.typer.typed(global.reify {System.out.println("Execution duration "+((System.currentTimeMillis())/1000))}.tree)
+            // global.treeCopy.
+            //global.reify {System.out.println("toto")}.tree
+            //global.EmptyTree
+            } else tree
         case _ => tree
-      }*/
+      }
+      }
 
       override def transform(tree: global.Tree): global.Tree = {
         postTransform(super.transform(preTransform(tree)))
-        }
+      }
     }
 
     /*
