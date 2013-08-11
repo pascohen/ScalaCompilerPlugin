@@ -48,8 +48,9 @@ class DSLPluginCompiler(val global: Global) extends Plugin {
       override def name = DSLPluginCompiler.this.name
 
       def apply(unit: global.CompilationUnit) {
-        //println("What is B/Wlist status " + blacklistFile + "/" + whitelistFile + "/" + restrictCalls)
         if (restrictCalls) {
+          //println("B/W list will be used based on BL file:" + blacklistFile + " and WL file:" + whitelistFile)
+          // TODO: Filter on files
           for (global.Apply(fun, _) <- unit.body) {
             fun.symbol match {
               case method: global.MethodSymbol =>
@@ -66,10 +67,10 @@ class DSLPluginCompiler(val global: Global) extends Plugin {
     }
   }
 
-  private object DSLTimerComponent extends PluginComponent 
-  with Transform 
-  with TypingTransformers 
-  with TreeDSL {
+  private object DSLTimerComponent extends PluginComponent
+    with Transform
+    with TypingTransformers
+    with TreeDSL {
     val global: DSLPluginCompiler.this.global.type = DSLPluginCompiler.this.global
 
     val runsAfter = List[String]("typer", "refchecks", "dslrestrict");
@@ -82,30 +83,30 @@ class DSLPluginCompiler(val global: Global) extends Plugin {
 
       //println("What is timer status " + isTimerActivated + "/" + timerValue)
 
-      var gtStartTime:global.Tree = _
-      
       def preTransform(tree: global.Tree): global.Tree = tree
 
       def postTransform(tree: global.Tree): global.Tree = {
-          //println("post-transforming fun " + tree)
-        
+        //println("post-transforming fun " + tree)
+
         tree match {
-            case f:global.Function =>    
-            gtStartTime = tree
-            println("GetStartTime "+f+" "+gtStartTime)
-            tree
-        case global.Apply(fun, _) =>    
-          if (fun.toString.contains("exit")) {
-            println("post-transforming fun " + fun)
-            //global.typer.typed(global.Block(global.reify {System.out.println("toto")}.tree,tree))
-            //global.typer.typed(global.reify {System.out.println("Execution duration "+((System.currentTimeMillis()-java.lang.management.ManagementFactory.getRuntimeMXBean().getStartTime())/1000))}.tree)
-            global.typer.typed(global.reify {System.out.println("Execution duration "+((System.currentTimeMillis())/1000))}.tree)
-            // global.treeCopy.
-            //global.reify {System.out.println("toto")}.tree
-            //global.EmptyTree
+          case global.Apply(fun, _) =>
+            if (fun.toString.contains("println")) {
+              //println("post-transforming fun " + fun)
+              
+              //TreeMethods(target).Int_>(other)
+              val timerConst = CODE.LIT(timerValue.getOrElse(10))
+              val scriptDuration = global.reify {((System.currentTimeMillis()-dslprez.timer.MyTimer.getStartTime) / 1000).intValue }.tree
+              val condTree = new CODE.TreeMethods(scriptDuration).INT_>=(timerConst)
+                //CODE.fn(scriptDuration,global.TermName(">"),timerConst)
+                //global.reify {((System.currentTimeMillis()-dslprez.timer.MyTimer.getStartTime) / 1000) > 4 }.tree
+              val ifTree = global.reify {throw new RuntimeException("too long")}.tree
+              //val falseTree = global.reify { println("fake")}.tree
+              val testTree = new CODE.IfStart(condTree,ifTree).ELSE(tree)
+              global.typer.typed(testTree)           
+              //global.typer.typed(global.reify { if(((System.currentTimeMillis()-dslprez.timer.MyTimer.getStartTime) / 1000) > 4) throw new RuntimeException("Script too long")}.tree)
             } else tree
-        case _ => tree
-      }
+          case _ => tree
+        }
       }
 
       override def transform(tree: global.Tree): global.Tree = {
