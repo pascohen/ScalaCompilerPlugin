@@ -110,7 +110,11 @@ class DSLPluginCompiler(val global: Global) extends Plugin {
       }
 
       override def transform(tree: global.Tree): global.Tree = {
+        if (timerValue.isDefined) {
         postTransform(super.transform(preTransform(tree)))
+        } else {
+          super.transform(tree)
+        }
       }
     }
 
