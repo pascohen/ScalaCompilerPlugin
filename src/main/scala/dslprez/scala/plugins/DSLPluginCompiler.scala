@@ -90,7 +90,7 @@ class DSLPluginCompiler(val global: Global) extends Plugin {
 
         tree match {
           case global.Apply(fun, _) =>
-            if (fun.toString.contains("println")) {
+            if (fun.toString.contains("move")) {
               //println("post-transforming fun " + fun)
               
               //TreeMethods(target).Int_>(other)
@@ -99,7 +99,7 @@ class DSLPluginCompiler(val global: Global) extends Plugin {
               val condTree = new CODE.TreeMethods(scriptDuration).INT_>=(timerConst)
                 //CODE.fn(scriptDuration,global.TermName(">"),timerConst)
                 //global.reify {((System.currentTimeMillis()-dslprez.timer.MyTimer.getStartTime) / 1000) > 4 }.tree
-              val ifTree = global.reify {throw new RuntimeException("too long")}.tree
+              val ifTree = global.reify {throw new RuntimeException("Execution timed out. Start time: "+new java.util.Date(dslprez.timer.MyTimer.getStartTime))}.tree
               //val falseTree = global.reify { println("fake")}.tree
               val testTree = new CODE.IfStart(condTree,ifTree).ELSE(tree)
               global.typer.typed(testTree)           
