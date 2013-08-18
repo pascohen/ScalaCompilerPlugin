@@ -95,15 +95,14 @@ class DSLPluginCompiler(val global: Global) extends Plugin {
               
               //TreeMethods(target).Int_>(other)
               val timerConst = CODE.LIT(timerValue.getOrElse(10))
-              val scriptDuration = global.reify {((System.currentTimeMillis()-dslprez.timer.MyTimer.getStartTime) / 1000).intValue }.tree
+              val scriptDuration = global.reify {((System.currentTimeMillis()-dslprez.scala.timer.MyTimer.getStartTime) / 1000).intValue }.tree
               val condTree = new CODE.TreeMethods(scriptDuration).INT_>=(timerConst)
                 //CODE.fn(scriptDuration,global.TermName(">"),timerConst)
                 //global.reify {((System.currentTimeMillis()-dslprez.timer.MyTimer.getStartTime) / 1000) > 4 }.tree
-              val ifTree = global.reify {throw new RuntimeException("Execution timed out. Start time: "+new java.util.Date(dslprez.timer.MyTimer.getStartTime))}.tree
+              val ifTree = global.reify {throw new RuntimeException("Execution timed out. Start time: "+new java.util.Date(dslprez.scala.timer.MyTimer.getStartTime))}.tree
               //val falseTree = global.reify { println("fake")}.tree
               val testTree = new CODE.IfStart(condTree,ifTree).ELSE(tree)
               global.typer.typed(testTree)           
-              //global.typer.typed(global.reify { if(((System.currentTimeMillis()-dslprez.timer.MyTimer.getStartTime) / 1000) > 4) throw new RuntimeException("Script too long")}.tree)
             } else tree
           case _ => tree
         }
