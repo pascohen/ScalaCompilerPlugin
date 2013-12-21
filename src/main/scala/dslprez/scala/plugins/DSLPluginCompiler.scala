@@ -148,12 +148,11 @@ class DSLPluginCompiler(val global: Global) extends Plugin {
      def transformTree: PartialFunction[Tree, Tree] = {
       case Apply(Select(x, TermName("assign_to")), List(Ident(TermName(name)))) =>
         ValDef(Modifiers(), TermName(name), TypeTree(), x)
-       case Apply(Select(x, TermName("$minus$minus$greater")), List(Ident(TermName(name)))) =>
-        ValDef(Modifiers(), TermName(name), TypeTree(), x)
+   //    case Apply(Select(x, TermName("$minus$minus$greater")), List(Ident(TermName(name)))) =>
+    //    ValDef(Modifiers(), TermName(name), TypeTree(), x)
     }
 
      def handleList(item: List[Tree]): List[Tree] = {
-      println("Handling List Tree" + item)
       item.map(it => handle(it))
       
     }
