@@ -13,7 +13,7 @@ class DSLPluginCompiler(val global: Global) extends Plugin {
 
   val name = "dslplugin"
   val description = "various filters - blacklist/whitelist and timer plugin"
-  val components = List[PluginComponent](DSLRestrictComponent, DSLTimerComponent)
+  val components = List[PluginComponent](DSLRestrictComponent, DSLTimerComponent, DSLTransformer)
 
   var blacklistFile: Option[String] = None
   var whitelistFile: Option[String] = None
@@ -95,11 +95,11 @@ class DSLPluginCompiler(val global: Global) extends Plugin {
               
               //TreeMethods(target).Int_>(other)
               val timerConst = CODE.LIT(timerValue.getOrElse(10))
-              val scriptDuration = global.reify {((System.currentTimeMillis()-dslprez.scala.timer.MyTimer.getStartTime) / 1000).intValue }.tree
+              val scriptDuration = global.reify {(System.currentTimeMillis() / 1000).intValue }.tree
               val condTree = new CODE.TreeMethods(scriptDuration).INT_>=(timerConst)
                 //CODE.fn(scriptDuration,global.TermName(">"),timerConst)
                 //global.reify {((System.currentTimeMillis()-dslprez.timer.MyTimer.getStartTime) / 1000) > 4 }.tree
-              val ifTree = global.reify {throw new RuntimeException("Execution timed out. Start time: "+new java.util.Date(dslprez.scala.timer.MyTimer.getStartTime))}.tree
+              val ifTree = global.reify {throw new RuntimeException("Execution timed out.")}.tree
               //val falseTree = global.reify { println("fake")}.tree
               val testTree = new CODE.IfStart(condTree,ifTree).ELSE(tree)
               global.typer.typed(testTree)           
@@ -127,5 +127,80 @@ class DSLPluginCompiler(val global: Global) extends Plugin {
          println("What is timer status " + isTimerActivated + "/" + timerValue)
       }
     }*/
+  }
+  
+  private object DSLTransformer extends PluginComponent
+    with Transform
+    with TypingTransformers
+    with TreeDSL {
+    val global: DSLPluginCompiler.this.global.type = DSLPluginCompiler.this.global
+
+    import global._
+    
+    val runsAfter = List[String]("parser");
+
+    val phaseName = "dsltransformer"
+
+    def newTransformer(unit: global.CompilationUnit) = new TemplateTransformer(unit)
+
+    class TemplateTransformer(unit: global.CompilationUnit) extends TypingTransformer(unit) {
+        
+     def transformTree: PartialFunction[Tree, Tree] = {
+      case Apply(Select(x, TermName("assign_to")), List(Ident(TermName(name)))) =>
+        ValDef(Modifiers(), TermName(name), TypeTree(), x)
+       case Apply(Select(x, TermName("$minus$minus$greater")), List(Ident(TermName(name)))) =>
+        ValDef(Modifiers(), TermName(name), TypeTree(), x)
+    }
+
+     def handleList(item: List[Tree]): List[Tree] = {
+      println("Handling List Tree" + item)
+      item.map(it => handle(it))
+      
+    }
+    
+    def handle(item: Tree): Tree = {
+      if (transformTree.isDefinedAt(item)) {
+        transformTree(item)
+      } else {
+        item match {          
+          case LabelDef(a, b, c) => LabelDef(a, b, handle(c))
+           
+           /*
+          case If(c,Block(t),d) => t match {
+            case t: Tuple2[_, _] => If(c,Block(handleList(t._1), handle(t._2)),d)
+            case _ => handle(item)
+          }*/
+/*
+          case Block(t) => t match {
+            case t: Tuple2[_, _] => Block(handleList(t._1), handle(t._2))
+            case _ => handle(item)
+          }
+          case Function(a, Block(t)) => t match {
+            case t: Tuple2[_, _] => Function(a, Block(handleList(t._1), handle(t._2)))
+            case _ => handle(item)
+          }
+ */         
+          //case Apply(a, list) => Apply(a, handleList(list))
+          case _ =>
+           // println("Handling " + showRaw(item))
+            item
+        }
+      }
+    }
+
+
+      def postTransform(tree: global.Tree): global.Tree = {   
+        tree match {
+          case Apply(fun, _) =>
+             handle(tree)
+          case _ => tree
+        }
+      }
+
+      override def transform(tree: global.Tree): global.Tree = {
+          postTransform(super.transform(tree))
+      //    super.transform(tree)
+      }
+    }
   }
 }
